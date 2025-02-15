@@ -67,7 +67,7 @@ st.write(input_df)
 st.write('---')
 
 # Load the optimized GradientBoostingRegressor model from pickle file
-with open('optimized_gbrt_model.pkl', 'rb') as file:
+with open('optimized_gbrt_model (1)', 'rb') as file:
     model = pickle.load(file)
 
 st.header('Prediction of Concrete Compressive Strength (fck)')
