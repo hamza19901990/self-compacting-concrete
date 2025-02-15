@@ -1,79 +1,76 @@
-import numpy as np  # linear algebra
-import pandas as pd  # data processing, CSV file I/O (e.g. pd.read_csv)
+import numpy as np
+import pandas as pd
 import streamlit as st
 from PIL import Image
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import GradientBoostingRegressor
 import pickle
 
 st.write("""
-# Fiber Reinforced Polymer Flat Slab Shear
-This app predicts the **Ultimate Shear Capacity of Fiber Reinforced Polymer Flat Slab Shear**!
+# Concrete Compressive Strength Prediction App
+This app predicts the **Concrete Compressive Strength (fck)** based on input parameters.
 """)
 st.write('---')
 
-image = Image.open(r'soil.jpg')
+# Display an image (update the image file if needed)
+image = Image.open('concrete.jpg')  # Change filename if required
 st.image(image, use_column_width=True)
 
-data = pd.read_csv(r"finalequtionsmars.csv")
-req_col_names = ["A_cm2", "bo_mm", "bo_1_5_mm", "de", "fc_Mpa", "p_percent", "Er_Gpa", "Vu_kN"]
-curr_col_names = list(data.columns)
+# (Optional) Display the statistical summary as reference
+st.subheader('Statistical Summary of Input Predictors and Compressive Strength')
+st.markdown("""
+| **Predictor**              | **Minimum** | **Maximum** | **Average** | **Standard Deviation** | **Skewness** |
+|----------------------------|-------------|-------------|-------------|------------------------|--------------|
+| fck (MPa)                  | 7.17        | 81.9        | 43.62       | 13.77                  | 0.28         |
+| Cement (kg/m³)             | 78.00       | 635.00      | 362.22      | 107.94                 | -0.43        |
+| Water (kg/m³)              | 105.00      | 277.00      | 183.72      | 26.98                  | 0.36         |
+| FA (kg/m³)                 | 0.00        | 1200.00     | 684.09      | 295.08                 | -0.93        |
+| RFA (kg/m³)                | 0.00        | 1200.00     | 157.91      | 268.91                 | 1.69         |
+| CA (kg/m³)                 | 0.00        | 1170.00     | 426.75      | 332.45                 | -0.02        |
+| RCA (kg/m³)                | 0.00        | 1115.00     | 334.46      | 323.59                 | 0.53         |
+| MA (kg/m³)                 | 0.00        | 449.00      | 153.74      | 109.58                 | 0.39         |
+| CHA (kg/m³)                | 0.00        | 320.00      | 6.05        | 14.62                  | 16.92        |
+""")
 
-mapper = {}
-for i, name in enumerate(curr_col_names):
-    mapper[name] = req_col_names[i]
-
-data = data.rename(columns=mapper)
-st.subheader('Data Information')
-st.write(data.head())
-st.write(data.isna().sum())
-corr = data.corr()
-st.write(corr)
-
-X = data.iloc[:, :-1]  # Features - All columns but last
-y = data.iloc[:, -1]  # Target - Last Column
-
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-# Initialize and train the GradientBoostingRegressor
-model = GradientBoostingRegressor(learning_rate=0.5, n_estimators=100)
-model.fit(X_train, y_train)
-
+# Sidebar for user input
 st.sidebar.header('Specify Input Parameters')
+
 def get_input_features():
-    A_cm2 = st.sidebar.slider('A_cm2', 6.25, 1587.50, 671.10)
-    bo_mm = st.sidebar.slider('bo_mm', 280.00, 2470.00, 1496.90)
-    bo_1_5_mm = st.sidebar.slider('bo_1_5_mm', 640.00, 4608.00, 2509.18)
-    de = st.sidebar.slider('de', 36.00, 284.00, 127.89)
-    fc_Mpa = st.sidebar.slider('fc_Mpa', 22.16, 179.00, 44.72)
-    p_percent = st.sidebar.slider('p_percent', 0.13, 3.76, 0.94)
-    Er_Gpa = st.sidebar.slider('Er_Gpa', 28.40, 230.00, 74.44)
+    # Note: We use the average value as the default for each slider.
+    cement = st.sidebar.slider('Cement (kg/m³)', 78.0, 635.0, 362.22)
+    water = st.sidebar.slider('Water (kg/m³)', 105.0, 277.0, 183.72)
+    FA = st.sidebar.slider('FA (kg/m³)', 0.0, 1200.0, 684.09)
+    RFA = st.sidebar.slider('RFA (kg/m³)', 0.0, 1200.0, 157.91)
+    CA = st.sidebar.slider('CA (kg/m³)', 0.0, 1170.0, 426.75)
+    RCA = st.sidebar.slider('RCA (kg/m³)', 0.0, 1115.0, 334.46)
+    MA = st.sidebar.slider('MA (kg/m³)', 0.0, 449.0, 153.74)
+    CHA = st.sidebar.slider('CHA (kg/m³)', 0.0, 320.0, 6.05)
     
+    # Create a DataFrame of the user inputs
     data_user = {
-        'A_cm2': A_cm2,
-        'bo_mm': bo_mm,
-        'bo_1_5_mm': bo_1_5_mm,
-        'de': de,
-        'fc_Mpa': fc_Mpa,
-        'p_percent': p_percent,
-        'Er_Gpa': Er_Gpa
+        'Cement': cement,
+        'Water': water,
+        'FA': FA,
+        'RFA': RFA,
+        'CA': CA,
+        'RCA': RCA,
+        'MA': MA,
+        'CHA': CHA
     }
     
     features = pd.DataFrame(data_user, index=[0])
     return features
 
-df = get_input_features()
+input_df = get_input_features()
 
-# Main Panel
+# Display user input in the main panel
 st.header('Specified Input Parameters')
-st.write(df)
+st.write(input_df)
 st.write('---')
 
-# Reads in saved classification model
-load_clf = pickle.load(open('new.pkl', 'rb'))
+# Load the optimized GradientBoostingRegressor model from pickle file
+with open('optimized_gbrt_model.pkl', 'rb') as file:
+    model = pickle.load(file)
 
-st.header('Prediction of Vu (kN)')
-# Apply model to make predictions
-prediction = load_clf.predict(df)
-st.write(prediction)
-st.write('---') 
+st.header('Prediction of Concrete Compressive Strength (fck)')
+prediction = model.predict(input_df)
+st.write(f"Predicted Concrete Compressive Strength (fck): {prediction[0]:.2f} MPa")
+st.write('---')
